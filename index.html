@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101326">
+  <meta name="description" content="Melesa AI — your friendly Hindi and Hinglish AI companion.">
+  <title>Melesa AI — Your AI Companion</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">M</div><div><strong>Melesa AI</strong><span>Your friendly AI</span></div></div>
+      <button class="new-chat" id="newChat">＋ New chat</button>
+      <div class="sidebar-note"><span class="pulse"></span> Personal companion<br><small>Hindi · Hinglish · Voice</small></div>
+      <div class="sidebar-bottom">Made with care ✨<br><small>Your separate new project</small></div>
+    </aside>
+    <section class="chat-panel">
+      <header class="topbar">
+        <div class="mobile-brand"><div class="brand-mark">M</div><strong>Melesa AI</strong></div>
+        <div class="status"><span class="status-dot"></span> Ready to chat</div>
+        <button class="icon-btn" id="clearChat" title="Clear chat" aria-label="Clear chat">⌫</button>
+      </header>
+      <div class="welcome" id="welcome">
+        <div class="orb"><span>M</span></div>
+        <p class="eyebrow">YOUR PERSONAL AI COMPANION</p>
+        <h1>Hey, I'm <span>Melesa.</span></h1>
+        <p class="welcome-copy">Baat karo, ideas share karo, ya kuch naya seekho.<br>I'm here to help — Hindi or Hinglish, your choice.</p>
+        <div class="suggestions">
+          <button class="suggestion" data-prompt="Aaj mujhe kuch naya sikhao">✦ <span><b>Kuch naya sikhao</b><small>Learn something useful</small></span></button>
+          <button class="suggestion" data-prompt="Mujhe ek creative project idea do">✧ <span><b>Project idea do</b><small>Let's build something</small></span></button>
+          <button class="suggestion" data-prompt="Mera aaj ka plan banane mein help karo">◷ <span><b>Plan my day</b><small>Small steps, clear mind</small></span></button>
+        </div>
+      </div>
+      <div class="messages" id="messages" aria-live="polite"></div>
+      <div class="composer-wrap">
+        <div class="composer">
+          <textarea id="messageInput" rows="1" placeholder="Melesa se kuch bhi poochho..." aria-label="Message"></textarea>
+          <div class="composer-actions"><span class="hint" id="voiceHint">Enter to send · Shift + Enter for new line</span><div class="action-buttons"><button id="voiceBtn" class="voice-btn" title="Speak your message" aria-label="Speak your message">🎙</button><button id="sendBtn" class="send-btn" aria-label="Send message">➤</button></div></div>
+        </div>
+        <p class="disclaimer">Melesa AI starter · Replies are currently demo responses, not a live AI model.</p>
+      </div>
+    </section>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>
