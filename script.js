@@ -80,7 +80,28 @@ function demoReply(message) {
   return 'Main tumhari baat samajhne ki koshish kar rahi hoon. 💜 Abhi Melesa ka live AI connection set nahi hua hai, isliye ye demo mode hai aur main har sawaal ka real AI answer nahi de sakti. Live AI connect karne ke baad tum natural conversation kar paoge.';
 }
 
-function sendMessage(text = inputEl.value) {
+async function getAIReply(message) {
+  const apiBase = window.MELESA_API_URL;
+  if (!apiBase) {
+    await new Promise(resolve => window.setTimeout(resolve, 350));
+    return demoReply(message);
+  }
+  const history = [...messagesEl.querySelectorAll('.message')].slice(-12).map(row => ({
+    role: row.classList.contains('user') ? 'user' : 'assistant',
+    content: row.querySelector('.bubble')?.textContent || ''
+  })).filter(item => item.content && item.content !== 'Soch rahi hoon…');
+  const response = await fetch(apiBase.replace(/\\/$/, '') + '/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: history })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'AI connection abhi available nahi hai.');
+  if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('AI se reply nahi mila. Dobara try karo.');
+  return data.reply;
+}
+
+async function sendMessage(text = inputEl.value) {
   const message = String(text).trim();
   if (!message || isSending) return;
   addMessage(message, 'user');
@@ -90,16 +111,20 @@ function sendMessage(text = inputEl.value) {
   sendBtn.disabled = true;
   inputEl.disabled = true;
   const pending = addMessage('Soch rahi hoon…', 'assistant');
-  window.setTimeout(() => {
-    const reply = demoReply(message);
+  try {
+    const reply = await getAIReply(message);
     const bubble = pending.querySelector('.bubble');
     if (bubble) bubble.textContent = reply;
+  } catch (error) {
+    const bubble = pending.querySelector('.bubble');
+    if (bubble) bubble.textContent = 'AI connection error: ' + error.message + '\\n\\nBackend setup complete hone ke baad dobara try karo.';
+  } finally {
     persistChat();
     isSending = false;
     sendBtn.disabled = false;
     inputEl.disabled = false;
     inputEl.focus();
-  }, 350);
+  }
 }
 
 function resetChat() {
