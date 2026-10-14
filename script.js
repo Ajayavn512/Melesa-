@@ -4,8 +4,10 @@ const inputEl = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
 const voiceBtn = document.getElementById('voiceBtn');
 const voiceHint = document.getElementById('voiceHint');
+const STORAGE_KEY = 'melesa-chat-v1';
+let isSending = false;
 
-function addMessage(text, who) {
+function addMessage(text, who, save = true) {
   welcomeEl.hidden = true;
   const row = document.createElement('div');
   row.className = 'message ' + who;
@@ -21,18 +23,92 @@ function addMessage(text, who) {
   row.appendChild(bubble);
   messagesEl.appendChild(row);
   row.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  if (save) persistChat();
   return row;
 }
 
+function persistChat() {
+  try {
+    const items = [...messagesEl.querySelectorAll('.message')].map(row => ({
+      role: row.classList.contains('user') ? 'user' : 'assistant',
+      text: row.querySelector('.bubble')?.textContent || ''
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(-80)));
+  } catch (error) {
+    console.warn('Chat history could not be saved on this browser.', error);
+  }
+}
+
+function restoreChat() {
+  try {
+    const items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (!Array.isArray(items) || !items.length) return;
+    items.forEach(item => {
+      if (item && typeof item.text === 'string' && ['user', 'assistant'].includes(item.role)) {
+        addMessage(item.text, item.role, false);
+      }
+    });
+  } catch (_) {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+  if (messagesEl.children.length) welcomeEl.hidden = true;
+}
+
 function demoReply(message) {
-  const text = message.toLowerCase();
-  if (/\b(hi|hello|hey|namaste|नमस्ते)\b/.test(text)) return 'Hey! 😊 Main Melesa hoon. Tum kaise ho? Aaj kis baare mein baat karein?';
-  if (text.includes('kaise ho') || text.includes('कैसी हो') || text.includes('कैसे हो')) return 'Main badhiya hoon! 😊 Tumse baat karne ke liye ready. Tum batao, aaj kya chal raha hai?';
-  if (text.includes('idea') || text.includes('project')) return 'Ek useful idea: “Daily Skill Tracker” banao jahan tum apni learning, practice time aur daily progress save kar sako. Pehle simple HTML/CSS/JavaScript se start karo, phir Firebase add karna. ✨';
-  if (text.includes('plan') || text.includes('routine')) return 'Chalo simple plan banate hain:\n1. Aaj ka ek important task choose karo.\n2. Us par 25 minute focus karo.\n3. 5 minute break lo.\n4. End mein apni progress note karo.\n\nApna main goal bataoge toh main plan ko aur useful bana sakti hoon.';
-  if (text.includes('sad') || text.includes('udaas') || text.includes('tension') || text.includes('pareshan')) return 'Mujhe afsos hai ki tum aisa feel kar rahe ho. ❤️ Aaram se batao kya hua—main tumhari baat sunungi aur next step sochne mein help karungi.';
-  if (text.includes('help') || text.includes('madad')) return 'Bilkul, main help karne ki koshish karungi. 😊 Apni problem thoda detail mein batao, phir hum use chhote-chhote steps mein solve karenge.';
-  return 'Thanks for sharing! 💜 Main abhi starter/demo mode mein hoon, isliye live AI se jawab generate nahi kar rahi. Tumhara message UI mein kaam kar raha hai. Agle step mein secure backend + AI API connect karenge, taaki Melesa tumhare sawaalon ke real answers de sake.';
+  const text = message.toLowerCase().trim();
+  if (/^(hi|hello|hey|namaste|नमस्ते|hii|helo)[!. ]*$/.test(text)) {
+    return 'Hey! 😊 Main Melesa hoon. Tum Hindi ya Hinglish mein baat kar sakte ho. Aaj main kis cheez mein help karun?';
+  }
+  if (text.includes('love you') || text.includes('i love you')) {
+    return 'Aww, ye sweet hai 💜 Main ek AI companion hoon—main friendly conversation, ideas aur support ke liye yahan hoon. Batao, aaj kya baat karein?';
+  }
+  if (text.includes('kaise ho') || text.includes('कैसी हो') || text.includes('कैसे हो')) {
+    return 'Main theek hoon aur help ke liye ready! 😊 Tum kaise ho? Aaj kya chal raha hai?';
+  }
+  if (text.includes('idea') || text.includes('project')) {
+    return 'Ek practical idea: Daily Skill Tracker banao. Isme apna goal, aaj ki practice aur progress note karo. Pehle simple web page se shuru kar sakte ho. ✨';
+  }
+  if (text.includes('plan') || text.includes('routine')) {
+    return 'Chalo ek simple plan banate hain:\n\n1. Aaj ka ek important task choose karo.\n2. 25 minute us par focus karo.\n3. Chhota break lo.\n4. End mein progress note karo.\n\nTumhara main goal kya hai? Main uske hisaab se plan banane mein help karungi.';
+  }
+  if (text.includes('sad') || text.includes('udaas') || text.includes('tension') || text.includes('pareshan') || text.includes(' परेशान')) {
+    return 'Ye sunkar bura laga ki tum pareshan ho. ❤️ Aaram se batao kya hua. Main tumhari baat sun sakti hoon aur next step sochne mein help karungi.';
+  }
+  if (text.includes('help') || text.includes('madad') || text.includes('kya karu')) {
+    return 'Bilkul, chalo step-by-step dekhte hain. 😊 Tum apni problem ya goal thoda detail mein batao—main use simple steps mein samjhane ki koshish karungi.';
+  }
+  return 'Main tumhari baat samajhne ki koshish kar rahi hoon. 💜 Abhi Melesa ka live AI connection set nahi hua hai, isliye ye demo mode hai aur main har sawaal ka real AI answer nahi de sakti. Live AI connect karne ke baad tum natural conversation kar paoge.';
+}
+
+function sendMessage(text = inputEl.value) {
+  const message = String(text).trim();
+  if (!message || isSending) return;
+  addMessage(message, 'user');
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  isSending = true;
+  sendBtn.disabled = true;
+  inputEl.disabled = true;
+  const pending = addMessage('Soch rahi hoon…', 'assistant');
+  window.setTimeout(() => {
+    const reply = demoReply(message);
+    const bubble = pending.querySelector('.bubble');
+    if (bubble) bubble.textContent = reply;
+    persistChat();
+    isSending = false;
+    sendBtn.disabled = false;
+    inputEl.disabled = false;
+    inputEl.focus();
+  }, 350);
+}
+
+function resetChat() {
+  messagesEl.replaceChildren();
+  welcomeEl.hidden = false;
+  inputEl.value = '';
+  try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  inputEl.focus();
 }
 
 function speak(text) {
@@ -44,27 +120,9 @@ function speak(text) {
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'hi-IN';
   utterance.rate = 0.96;
-  const voices = window.speechSynthesis.getVoices();
-  const hindiVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
+  const hindiVoice = window.speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith('hi'));
   if (hindiVoice) utterance.voice = hindiVoice;
   window.speechSynthesis.speak(utterance);
-}
-
-function sendMessage(text = inputEl.value) {
-  const message = String(text).trim();
-  if (!message) return;
-  addMessage(message, 'user');
-  inputEl.value = '';
-  inputEl.style.height = 'auto';
-  sendBtn.disabled = true;
-  const pending = addMessage('Ek second…', 'assistant');
-  window.setTimeout(() => {
-    const reply = demoReply(message);
-    const bubble = pending.querySelector('.bubble');
-    if (bubble) bubble.textContent = reply;
-    sendBtn.disabled = false;
-    inputEl.focus();
-  }, 450);
 }
 
 sendBtn.addEventListener('click', () => sendMessage());
@@ -78,23 +136,13 @@ inputEl.addEventListener('input', () => {
   inputEl.style.height = 'auto';
   inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
 });
-document.querySelectorAll('[data-prompt]').forEach(button => {
-  button.addEventListener('click', () => sendMessage(button.dataset.prompt));
-});
+document.querySelectorAll('[data-prompt]').forEach(button => button.addEventListener('click', () => sendMessage(button.dataset.prompt)));
 document.getElementById('newChat').addEventListener('click', resetChat);
 document.getElementById('clearChat').addEventListener('click', resetChat);
 
-function resetChat() {
-  messagesEl.replaceChildren();
-  welcomeEl.hidden = false;
-  inputEl.value = '';
-  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-}
-
-let recognition = null;
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition) {
-  recognition = new SpeechRecognition();
+  const recognition = new SpeechRecognition();
   recognition.lang = 'hi-IN';
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
@@ -103,9 +151,9 @@ if (SpeechRecognition) {
     voiceHint.textContent = 'Sun rahi hoon… ab bolo';
   });
   recognition.addEventListener('result', event => {
-    const transcript = event.results[0][0].transcript;
-    inputEl.value = transcript;
+    inputEl.value = event.results[0][0].transcript;
     inputEl.focus();
+    inputEl.dispatchEvent(new Event('input'));
   });
   recognition.addEventListener('end', () => {
     voiceBtn.classList.remove('listening');
@@ -118,8 +166,7 @@ if (SpeechRecognition) {
     try { recognition.start(); } catch (_) { voiceHint.textContent = 'Voice input already starting hai.'; }
   });
 } else {
-  voiceBtn.addEventListener('click', () => {
-    voiceHint.textContent = 'Voice input is browser mein supported nahi hai. Chrome try karo ya type karo.';
-  });
+  voiceBtn.addEventListener('click', () => { voiceHint.textContent = 'Voice input is browser mein supported nahi hai. Chrome try karo ya type karo.'; });
 }
-window.speechSynthesis?.getVoices?.();
+
+restoreChat();
